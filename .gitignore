@@ -1,0 +1,43 @@
+# Python stuff
+__pycache__/
+.idea/
+
+# ignore all txt files
+*.txt
+
+# ignore log files
+*.log
+
+# ignore all xls and xlsx files
+*.xls
+*.xlsx
+
+# ignore all json files
+*.json
+
+# ignore R-Specific system files
+*.Rhistory
+*.Rprofile
+*.RData
+*.Rproj
+*.Rmd
+
+# ignore the folders for auto ml and dash
+mlruns/
+dash-worker-space/
+
+# ignore the folders for the signal data
+Signals_Source/
+
+# ignore all big files folders
+00_Data/05_Blockchain_Data/
+00_Data/03_Twint_Data/
+00_Data/04_Twitter_Data/
+00_Data/07_Signals_Data
+04_R_Codes/packrat
+04_R_Codes/renv
+
+
+# ignore Jupyter checkpoints
+.ipynb_checkpoints/
+.Rproj.user
