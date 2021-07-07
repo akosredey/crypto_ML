@@ -329,6 +329,54 @@ arima_2020_tr <- auto.arima(bit_ts_tran2)
 
 checkresiduals(arima_2020_tr)
 
+#-------------------------------------------------------------------------------
+# Taking only 2021
+#-------------------------------------------------------------------------------
+
+cut3_bit_df = cut_bit_df %>%
+  filter(Date >= ymd('2021-01-01'))
+
+ggplotly(cut3_bit_df %>%
+           mutate(WeightedPrice = BoxCox(cut3_bit_df$WeightedPrice, 
+                                         lambda = BoxCox.lambda(
+                                           cut3_bit_df$WeightedPrice))) %>%
+           ggplot(aes(Date, WeightedPrice)) + geom_line(col = '#ffa500') + 
+           labs(title = 'Bitcoin', x = '', y = 'Price (Transformed)') + my_theme)
+
+
+ggplotly(cut3_bit_df[-1,] %>%
+           mutate(WeightedPrice = diff(BoxCox(cut3_bit_df$WeightedPrice, 
+                                              lambda = BoxCox.lambda(
+                                                cut3_bit_df$WeightedPrice)))) %>%
+           ggplot(aes(Date, WeightedPrice)) + geom_line(col = '#ffa500') + 
+           my_theme + labs(x = '', title = 'Transformed Price', y = 'Difference'))
+
+
+#-------------------------------------------------------------------------------
+# ACF, PCF only for 2021
+#-------------------------------------------------------------------------------
+
+bit_ts3 = bitcoin %>%
+  filter(Date >= as.Date('2021-01-01')) %>%
+  arrange(Date) %>%
+  select(WeightedPrice) %>%
+  as.matrix() %>%
+  ts()
+
+bit_ts_tran3 = BoxCox(bit_ts3, lambda = BoxCox.lambda(bit_ts2))
+
+ggAcf(diff(bit_ts_tran3), lag.max = 200) + my_theme + labs(title = 'ACF' , 
+                                                           y = 'Correlation') 
+
+ggPacf(diff(bit_ts_tran3), lag.max = 200) + my_theme + labs(title = 'PACF', y = '')
+
+#-------------------------------------------------------------------------------
+# Autoarima for Data only 2021
+#-------------------------------------------------------------------------------                                                           
+
+arima_2021_tr <- auto.arima(bit_ts_tran3)
+
+checkresiduals(arima_2021_tr)
 
 #-------------------------------------------------------------------------------
 # ARIMA Model Fits
@@ -365,7 +413,26 @@ bit_ts_ret_past_2017 %>%
 
 
 summary(Arima(bit_ret_ts, order = c(0,1,0), include.drift = T))
+
+
+## Random Walk Test on Daily Data only 2020
+bit_ts_tran2 %>%
+  Arima(order = c(0,1,0), include.drift = T) %>%
+  checkresiduals()
+
+
+summary(Arima(bit_ret_ts, order = c(0,1,0), include.drift = T))
   
+
+## Random Walk Test on Daily Data only 2021
+bit_ts_tran3 %>%
+  Arima(order = c(0,1,0), include.drift = T) %>%
+  checkresiduals()
+
+
+summary(Arima(bit_ret_ts, order = c(0,1,0), include.drift = T))
+
+
 
 #-------------------------------------------------------------------------------
 # Check errors
@@ -397,7 +464,6 @@ invers_BoxCox(sd(err_ret), BoxCox.lambda(bit_ret_ts))
 #-------------------------------------------------------------------------------
 # Forecast with ARIMA
 #-------------------------------------------------------------------------------   
-
 
 
 ## h is the the length you want the prediction to be in units of days
@@ -463,7 +529,6 @@ ggplotly(fit_model(bitcoin, 30) %>%
                                          '$20,000', '$25,000', '$30,000', 
                                          '$35,000', '$40,000', '$45,000', 
                                          '$50,000', '$55,000', '$60,000')))
-
 
 
 
