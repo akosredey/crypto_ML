@@ -38,6 +38,9 @@ library(fpp2)
 library(astsa)
 library(plotly)
 library(tseries)
+library(car)
+library(caret)
+library(e1071)
 
 #-------------------------------------------------------------------------------
 # Initial configurations
@@ -145,6 +148,7 @@ gglagplot(bit_ts, do.lines = F) + my_theme +
 #-------------------------------------------------------------------------------
 # Autocorrelation (ACF) and Partial Autocorrelation (PACF) plots
 #-------------------------------------------------------------------------------
+
 
 ggAcf(bit_ts, lag.max = 200) + my_theme + labs(title = 'ACF' , y = 'Correlation')
 
@@ -262,6 +266,135 @@ adf.test(bit_ts_tran) # p-value < 0.05 indicates the TS is stationary
 
 # Daily Returns Dataset
 adf.test(bit_ret_ts) # p-value < 0.05 indicates the TS is stationary
+
+
+#-------------------------------------------------------------------------------
+# Test for Homoskedasticity
+#------------------------------------------------------------------------------- 
+
+# Original Dataset
+# Fit LM
+lmMod_orig <- lm(WeightedPrice ~ Volume+SMA_30+EMA_40+Altcoin_EMA_40+DASH+DOGE+ETC+ETH+LTC+SC+XEM+XMR+XRP+ZEC+CLF+
+              CNYUSDX+DJI+EURUSDX+GCF+GSPC+IXIC+JPYUSDX+TSLA+VIX+XWDTO+Cost_per_TR+Num_TR_per_Block+
+              Bu_Be_Spread_MA8+SMA_05+SMA_90+EMA_05+EMA_90+MACD+Avg_Dir_Mvmt+RSI+Awesome_Osc+ROC+
+              Stoch_RSI+Ultimate_Osc+True_SI+Cum_Return+Log_Return+Number_of_Transactions+
+              Active_Addresses+New_Addresses+Hash_Rate, data=bitcoin)
+
+
+par(mfrow=c(2,2))
+plot(lmMod_orig)
+
+# Breusch Pagan Test
+lmtest::bptest(lmMod_orig)
+
+# NCV Test
+car::ncvTest(lmMod_orig)
+
+
+# Transformed Dataset (Daily returns)
+# Fit LM
+lmMod_ret <- lm(WeightedPrice_return ~ DASH_return+DOGE_return+ETC_return+ETH_return+LTC_return+SC_return+XEM_return+
+                 XMR_return+XRP_return+ZEC_return+CLF_return+CNYUSDX_return+DJI_return+EURUSDX_return+
+                 GCF_return+GSPC_return+IXIC_return+JPYUSDX_return+TSLA_return+VIX_return+
+                 XWDTO_return+Volume+SMA_30+EMA_40+Altcoin_EMA_40+Cost_per_TR+Num_TR_per_Block+
+                 Bu_Be_Spread_MA8+SMA_05+SMA_90+EMA_05+EMA_90+MACD+Avg_Dir_Mvmt+RSI+Awesome_Osc+
+                 ROC+Stoch_RSI+Ultimate_Osc+True_SI+Cum_Return+Log_Return+Number_of_Transactions+
+                 Active_Addresses+New_Addresses+Hash_Rate, data=btc)
+
+par(mfrow=c(2,2))
+plot(lmMod_ret)
+
+# Breusch Pagan Test
+lmtest::bptest(lmMod_ret)
+# NCV Test
+car::ncvTest(lmMod_ret)
+
+
+#-------------------------------------------------------------------------------
+# Transform Dataset with Box-Cox and check the heteroskedasticity again
+#------------------------------------------------------------------------------- 
+
+# Make Box-Cox transformation model
+distBCMod <- caret::BoxCoxTrans(bitcoin$WeightedPrice)
+print(distBCMod)
+
+# Perform Box-Cox transformation
+bitcoin <- cbind(bitcoin, dist_new=predict(distBCMod, bitcoin$WeightedPrice))
+head(bitcoin)
+
+
+# Original Dataset BoxCox Transformed
+# Fit LM
+lmMod_bc <- lm(dist_new ~ Volume+SMA_30+EMA_40+Altcoin_EMA_40+DASH+DOGE+ETC+ETH+LTC+SC+XEM+XMR+XRP+ZEC+CLF+
+                          CNYUSDX+DJI+EURUSDX+GCF+GSPC+IXIC+JPYUSDX+TSLA+VIX+XWDTO+Cost_per_TR+Num_TR_per_Block+
+                          Bu_Be_Spread_MA8+SMA_05+SMA_90+EMA_05+EMA_90+MACD+Avg_Dir_Mvmt+RSI+Awesome_Osc+ROC+
+                          Stoch_RSI+Ultimate_Osc+True_SI+Cum_Return+Log_Return+Number_of_Transactions+
+                          Active_Addresses+New_Addresses+Hash_Rate, data=bitcoin)
+
+
+lmtest::bptest(lmMod_bc)
+car::ncvTest(lmMod_bc)
+
+plot(lmMod_bc)
+
+
+#-------------------------------------------------------------------------------
+# Transform 2017+ Dataset with Box-Cox and check the heteroskedasticity again
+#------------------------------------------------------------------------------- 
+
+# Make Box-Cox transformation model
+distBCMod_2017p <- caret::BoxCoxTrans(cut_bit_df$WeightedPrice)
+print(distBCMod_2017p)
+
+# Perform Box-Cox transformation
+cut_bit_df <- cbind(cut_bit_df, dist_new_2017p=predict(distBCMod_2017p, cut_bit_df$WeightedPrice))
+head(cut_bit_df)
+
+
+# Original Dataset BoxCox Transformed
+# Fit LM
+lmMod_bc_2017p <- lm(dist_new_2017p ~ Volume+SMA_30+EMA_40+Altcoin_EMA_40+DASH+DOGE+ETC+ETH+LTC+SC+XEM+XMR+XRP+ZEC+CLF+
+                 CNYUSDX+DJI+EURUSDX+GCF+GSPC+IXIC+JPYUSDX+TSLA+VIX+XWDTO+Cost_per_TR+Num_TR_per_Block+
+                 Bu_Be_Spread_MA8+SMA_05+SMA_90+EMA_05+EMA_90+MACD+Avg_Dir_Mvmt+RSI+Awesome_Osc+ROC+
+                 Stoch_RSI+Ultimate_Osc+True_SI+Cum_Return+Log_Return+Number_of_Transactions+
+                 Active_Addresses+New_Addresses+Hash_Rate, data=cut_bit_df)
+
+
+lmtest::bptest(lmMod_bc_2017p)
+car::ncvTest(lmMod_bc_2017p)
+
+plot(lmMod_bc_2017p)
+
+
+#-------------------------------------------------------------------------------
+# Transform Returns Dataset with Box-Cox and check the heteroskedasticity again
+#------------------------------------------------------------------------------- 
+
+# Make Box-Cox transformation model
+distBCMod_2017p_ret <- caret::BoxCoxTrans(btc$WeightedPrice_return)
+print(distBCMod_2017p_ret)
+
+# Perform Box-Cox transformation
+btc <- cbind(btc, dist_new_2017p_ret=predict(distBCMod_2017p_ret, btc$WeightedPrice_return))
+head(btc)
+
+
+# Original Dataset BoxCox Transformed
+# Fit LM
+lmMod_bc_2017p_ret <- lm(dist_new_2017p_ret ~ DASH_return+DOGE_return+ETC_return+ETH_return+LTC_return+SC_return+XEM_return+
+                           XMR_return+XRP_return+ZEC_return+CLF_return+CNYUSDX_return+DJI_return+EURUSDX_return+
+                           GCF_return+GSPC_return+IXIC_return+JPYUSDX_return+TSLA_return+VIX_return+
+                           XWDTO_return+Volume+SMA_30+EMA_40+Altcoin_EMA_40+Cost_per_TR+Num_TR_per_Block+
+                           Bu_Be_Spread_MA8+SMA_05+SMA_90+EMA_05+EMA_90+MACD+Avg_Dir_Mvmt+RSI+Awesome_Osc+
+                           ROC+Stoch_RSI+Ultimate_Osc+True_SI+Cum_Return+Log_Return+Number_of_Transactions+
+                           Active_Addresses+New_Addresses+Hash_Rate, data=btc)
+
+
+lmtest::bptest(lmMod_bc_2017p_ret)
+car::ncvTest(lmMod_bc_2017p_ret)
+
+plot(lmMod_bc_2017p_ret)
+
 
 
 #-------------------------------------------------------------------------------
@@ -529,6 +662,8 @@ ggplotly(fit_model(bitcoin, 30) %>%
                                          '$20,000', '$25,000', '$30,000', 
                                          '$35,000', '$40,000', '$45,000', 
                                          '$50,000', '$55,000', '$60,000')))
+
+
 
 
 
